@@ -85,36 +85,70 @@ class DatasetDownloader:
             (self.target_path / 'real').mkdir(parents=True, exist_ok=True)
             (self.target_path / 'ai').mkdir(parents=True, exist_ok=True)
             
-            # CIFAKE typically has train/ and test/ folders with REAL/ and FAKE/ subdirectories
-            # We'll combine both train and test for a larger dataset
             moved_count = {'real': 0, 'ai': 0}
             
+            # CIFAKE can have different structures, let's try to find the images
+            # Possible structures:
+            # 1. train/REAL, train/FAKE, test/REAL, test/FAKE
+            # 2. REAL/, FAKE/ directly
+            # 3. Files directly in download_path with naming convention
+            
+            # Try structure 1: train/test folders
             for split in ['train', 'test']:
                 split_path = self.download_path / split
                 
-                if not split_path.exists():
-                    # Try without split folders
-                    split_path = self.download_path
-                
-                # Look for REAL images
-                real_source = split_path / 'REAL'
-                if real_source.exists():
-                    for img_file in real_source.glob('*.png'):
-                        target_file = self.target_path / 'real' / f"{split}_{img_file.name}"
-                        shutil.copy2(img_file, target_file)
-                        moved_count['real'] += 1
-                
-                # Look for FAKE images
-                fake_source = split_path / 'FAKE'
-                if fake_source.exists():
-                    for img_file in fake_source.glob('*.png'):
-                        target_file = self.target_path / 'ai' / f"{split}_{img_file.name}"
-                        shutil.copy2(img_file, target_file)
-                        moved_count['ai'] += 1
+                if split_path.exists():
+                    # Look for REAL images
+                    real_source = split_path / 'REAL'
+                    if real_source.exists():
+                        for img_file in real_source.glob('*.*'):
+                            if img_file.suffix.lower() in ['.png', '.jpg', '.jpeg']:
+                                target_file = self.target_path / 'real' / f"{split}_{img_file.name}"
+                                shutil.copy2(img_file, target_file)
+                                moved_count['real'] += 1
+                    
+                    # Look for FAKE images
+                    fake_source = split_path / 'FAKE'
+                    if fake_source.exists():
+                        for img_file in fake_source.glob('*.*'):
+                            if img_file.suffix.lower() in ['.png', '.jpg', '.jpeg']:
+                                target_file = self.target_path / 'ai' / f"{split}_{img_file.name}"
+                                shutil.copy2(img_file, target_file)
+                                moved_count['ai'] += 1
             
+            # Try structure 2: REAL/FAKE directly in download path
             if moved_count['real'] == 0 and moved_count['ai'] == 0:
-                logging.error("Could not find REAL/ and FAKE/ folders in the download")
-                logging.error(f"Please check the structure in {self.download_path}")
+                real_source = self.download_path / 'REAL'
+                fake_source = self.download_path / 'FAKE'
+                
+                if real_source.exists():
+                    for img_file in real_source.glob('*.*'):
+                        if img_file.suffix.lower() in ['.png', '.jpg', '.jpeg']:
+                            shutil.copy2(img_file, self.target_path / 'real' / img_file.name)
+                            moved_count['real'] += 1
+                
+                if fake_source.exists():
+                    for img_file in fake_source.glob('*.*'):
+                        if img_file.suffix.lower() in ['.png', '.jpg', '.jpeg']:
+                            shutil.copy2(img_file, self.target_path / 'ai' / img_file.name)
+                            moved_count['ai'] += 1
+            
+            # If still nothing, let's see what's actually there
+            if moved_count['real'] == 0 and moved_count['ai'] == 0:
+                logging.error("Could not find images in expected structure.")
+                logging.info(f"Looking for files in: {self.download_path}")
+                
+                # List what we actually have
+                if self.download_path.exists():
+                    contents = list(self.download_path.iterdir())
+                    logging.info(f"Found these items: {[item.name for item in contents[:10]]}")
+                    
+                    # Check if there's a nested folder
+                    for item in contents:
+                        if item.is_dir():
+                            nested = list(item.iterdir())
+                            logging.info(f"Inside {item.name}: {[n.name for n in nested[:10]]}")
+                
                 return False
             
             logging.info(f"Organized {moved_count['real']} real images and {moved_count['ai']} AI images")
@@ -122,6 +156,8 @@ class DatasetDownloader:
             
         except Exception as e:
             logging.error(f"Failed to organize dataset: {e}")
+            import traceback
+            logging.error(traceback.format_exc())
             return False
     
     def setup(self, force_download: bool = False) -> bool:
@@ -633,18 +669,54 @@ def main():
     
     # Set up configuration
     config = Config(
-        data_path="./dataset/",  # Update this to your dataset path
+        data_path="./dataset/",
         epochs=5,
         model_dir="trained_models"
     )
 
-    # Uncomment to train models
-    # logging.info("=" * 50)
-    # logging.info("STARTING TRAINING")
-    # logging.info("=" * 50)
-    # trainer = Trainer(config)
-    # trainer.run()
-    # logging.info("Training complete!")
+    # Setup dataset (download and organize if needed)
+    logging.info("=" * 50)
+    logging.info("DATASET SETUP")
+    logging.info("=" * 50)
+    
+    downloader = DatasetDownloader(
+        download_path='./cifake_data',
+        target_path=config.data_path
+    )
+    
+    if not downloader.setup(force_download=False):
+        logging.error("Dataset setup failed. Please check the errors above.")
+        logging.info("\nMake sure you have:")
+        logging.info("1. Installed kaggle: pip install kaggle")
+        logging.info("2. Created API token at kaggle.com/settings")
+        logging.info("3. Placed kaggle.json in ~/.kaggle/ directory")
+        return
+
+    # Check if models exist
+    model_dir = Path(config.model_dir)
+    models_exist = (
+        (model_dir / 'cnn_model.pth').exists() and
+        (model_dir / 'rf_model.pkl').exists() and
+        (model_dir / 'svm_model.pkl').exists()
+    )
+
+    # Train models if they don't exist
+    if not models_exist:
+        logging.info("\n" + "=" * 50)
+        logging.info("No trained models found. Starting training...")
+        logging.info("=" * 50)
+        
+        response = input("\nThis will take some time. Continue? (y/n): ")
+        if response.lower() != 'y':
+            logging.info("Training cancelled. Exiting.")
+            return
+        
+        trainer = Trainer(config)
+        trainer.run()
+        logging.info("Training complete!")
+    else:
+        logging.info("\nFound existing trained models. Skipping training.")
+        logging.info("(Delete the 'trained_models' folder to retrain from scratch)")
 
     # Run prediction example
     logging.info("\n" + "=" * 50)
@@ -654,9 +726,20 @@ def main():
     try:
         predictor = Predictor(config)
         
-        # Create a dummy test image if needed
+        # Use a real image from the dataset if available
         test_image = "test_image.jpg"
-        if not Path(test_image).exists():
+        
+        # Try to grab a real image from the dataset first
+        dataset_real = Path(config.data_path) / 'real'
+        if dataset_real.exists():
+            real_images = list(dataset_real.glob('*.png'))
+            if real_images:
+                test_image = str(real_images[0])
+                logging.info(f"Using real image from dataset: {test_image}")
+        
+        # Fall back to creating a dummy image
+        if not Path(test_image).exists() or test_image == "test_image.jpg":
+            test_image = "test_image.jpg"
             Image.new('RGB', (100, 100)).save(test_image)
             logging.info(f"Created dummy test image: {test_image}")
         
@@ -665,11 +748,18 @@ def main():
         
         # Print results nicely
         import json
-        print("\nPredictions:")
+        print("\nPrediction Results:")
         print(json.dumps(predictions, indent=2))
         
-    except FileNotFoundError:
-        logging.error("Models not found. Please train the models first!")
+        # Show which class each model thinks it is
+        print("\nModel Consensus:")
+        for model_name, probs in predictions.items():
+            predicted_class = max(probs, key=probs.get)
+            confidence = probs[predicted_class] * 100
+            print(f"{model_name.upper()}: {predicted_class} ({confidence:.1f}% confidence)")
+        
+    except FileNotFoundError as e:
+        logging.error(f"Error: {e}")
     except Exception as e:
         logging.error(f"Error during prediction: {e}")
 
