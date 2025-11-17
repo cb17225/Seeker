@@ -290,6 +290,12 @@ ResNet Paper: Deep Residual Learning for Image Recognition (https://arxiv.org/ab
 
 LBP Features: Multiresolution Gray-Scale and Rotation Invariant Texture Classification
 
+Krizhevsky, A., & Hinton, G. (2009). Learning multiple layers of features from tiny images.
+
+Bird, J.J. and Lotfi, A., 2024. CIFAKE: Image Classification and Explainable Identification of AI-Generated Synthetic Images. IEEE Access.
+
+Real images are from Krizhevsky & Hinton (2009), fake images are from Bird & Lotfi (2024).
+
 ## License
 
 This project is open source and available for educational and research purposes.
