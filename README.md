@@ -298,34 +298,8 @@ Real images are from Krizhevsky & Hinton (2009), fake images are from Bird & Lot
 
 ## License
 
-This project is open source and available for educational and research purposes.
-
-## Contributing
-
-Feel free to contribute by adding support for more CNN backbones, implementing additional feature extractors, testing on different datasets, improving ensemble strategies, or adding visualization tools.
+Dataset used in project was, according to the Kaggle source, published [under the same MIT license as CIFAR-10](https://github.com/wichtounet/cifar-10/blob/master/LICENSE).
 
 ## Limitations
 
 There are some important limitations to keep in mind. The model is trained specifically on Stable Diffusion images from CIFAKE, so it might not work as well on images from newer or different AI generators. Performance also depends on image quality and compression artifacts. CIFAKE uses relatively small 32x32 images which can limit how much detail we can extract. If you want to detect AI images in a completely different domain (like medical images or satellite imagery), you'll probably need to retrain on domain-specific data.
-
-## Future Improvements
-
-Some ideas for making this better:
-
-Add attention visualization to see what parts of images the model focuses on
-
-Test how well models trained on one AI generator work on others
-
-Build a web interface with Gradio or Streamlit
-
-Add batch prediction for processing multiple images at once
-
-Implement model interpretability with SHAP or LIME
-
-Include frequency domain analysis using FFT
-
-Experiment with Vision Transformers instead of CNNs
-
----
-
-If you find this useful, feel free to share your results or contribute improvements!
