@@ -29,6 +29,8 @@ I chose this dataset because it's well-balanced and has been extensively tested 
 
 ### Prerequisites
 
+Recommended Python version: `3.11`
+
 You'll need to install these packages:
 
 ```bash
