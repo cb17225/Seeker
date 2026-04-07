@@ -3,7 +3,7 @@ from torch.utils.data import Dataset, DataLoader
 from transformers import CLIPProcessor
 from datasets import load_dataset
 
-from config import MODEL_NAME, DATASET_NAME, BATCH_SIZE
+from config import MODEL_NAME, DATASET_NAME, BATCH_SIZE, SEED
 
 
 class CIFAKEDataset(Dataset):
@@ -28,18 +28,33 @@ class CIFAKEDataset(Dataset):
         return pixel_values, torch.tensor(label, dtype=torch.long)
 
 
-def get_dataloaders(batch_size=BATCH_SIZE):
-    """Load CIFAKE from HuggingFace and return train/test DataLoaders."""
+def get_dataloaders(batch_size=BATCH_SIZE, val_split=0.1):
+    """Load CIFAKE from HuggingFace and return train/val/test DataLoaders.
+
+    Splits the training set into train (90%) and val (10%) so the test set
+    stays fully held out for final evaluation.
+    """
     dataset = load_dataset(DATASET_NAME)
     processor = CLIPProcessor.from_pretrained(MODEL_NAME)
 
-    train_set = CIFAKEDataset(dataset["train"], processor)
+    # Split training data into train + validation
+    split = dataset["train"].train_test_split(test_size=val_split, seed=SEED)
+
+    train_set = CIFAKEDataset(split["train"], processor)
+    val_set = CIFAKEDataset(split["test"], processor)
     test_set = CIFAKEDataset(dataset["test"], processor)
 
     train_loader = DataLoader(
         train_set,
         batch_size=batch_size,
         shuffle=True,
+        num_workers=2,
+        pin_memory=True,
+    )
+    val_loader = DataLoader(
+        val_set,
+        batch_size=batch_size,
+        shuffle=False,
         num_workers=2,
         pin_memory=True,
     )
@@ -51,4 +66,4 @@ def get_dataloaders(batch_size=BATCH_SIZE):
         pin_memory=True,
     )
 
-    return train_loader, test_loader
+    return train_loader, val_loader, test_loader
