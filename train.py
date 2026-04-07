@@ -85,7 +85,7 @@ def main():
 
     # ---- Data ----
     print("Loading CIFAKE dataset...")
-    train_loader, test_loader = get_dataloaders()
+    train_loader, val_loader, test_loader = get_dataloaders()
 
     # ---- Model ----
     print("Loading CLIP model...")
@@ -98,7 +98,7 @@ def main():
         "label_names": LABEL_NAMES,
     }
 
-    history = {"train_loss": [], "train_acc": [], "test_loss": [], "test_acc": []}
+    history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": []}
 
     # ---- Phase 1: Frozen backbone ----
     print("\n--- Phase 1: Training classifier head (backbone frozen) ---")
@@ -111,16 +111,16 @@ def main():
 
     for epoch in range(NUM_EPOCHS_FROZEN):
         train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, criterion, DEVICE)
-        test_loss, test_acc = evaluate(model, test_loader, criterion, DEVICE)
+        val_loss, val_acc = evaluate(model, val_loader, criterion, DEVICE)
 
         history["train_loss"].append(train_loss)
         history["train_acc"].append(train_acc)
-        history["test_loss"].append(test_loss)
-        history["test_acc"].append(test_acc)
+        history["val_loss"].append(val_loss)
+        history["val_acc"].append(val_acc)
 
         print(f"Epoch {epoch + 1}/{NUM_EPOCHS_FROZEN} | "
               f"Train Loss: {train_loss:.4f} Acc: {train_acc:.4f} | "
-              f"Test Loss: {test_loss:.4f} Acc: {test_acc:.4f}")
+              f"Val Loss: {val_loss:.4f} Acc: {val_acc:.4f}")
 
     save_checkpoint(model, os.path.join(SAVE_DIR, "phase1.pth"), model_config)
 
@@ -144,16 +144,16 @@ def main():
 
     for epoch in range(NUM_EPOCHS_UNFROZEN):
         train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, criterion, DEVICE)
-        test_loss, test_acc = evaluate(model, test_loader, criterion, DEVICE)
+        val_loss, val_acc = evaluate(model, val_loader, criterion, DEVICE)
 
         history["train_loss"].append(train_loss)
         history["train_acc"].append(train_acc)
-        history["test_loss"].append(test_loss)
-        history["test_acc"].append(test_acc)
+        history["val_loss"].append(val_loss)
+        history["val_acc"].append(val_acc)
 
         print(f"Epoch {epoch + 1}/{NUM_EPOCHS_UNFROZEN} | "
               f"Train Loss: {train_loss:.4f} Acc: {train_acc:.4f} | "
-              f"Test Loss: {test_loss:.4f} Acc: {test_acc:.4f}")
+              f"Val Loss: {val_loss:.4f} Acc: {val_acc:.4f}")
 
     # ---- Save final model ----
     save_checkpoint(model, os.path.join(SAVE_DIR, "model.pth"), model_config)
