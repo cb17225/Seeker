@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from PIL import Image
 from sklearn.metrics import classification_report, confusion_matrix
 from tqdm.auto import tqdm
 
@@ -24,7 +25,7 @@ def get_predictions(model, loader, device):
         probs = torch.softmax(logits, dim=1)
         preds = logits.argmax(dim=1)
 
-        all_labels.extend(labels.numpy())
+        all_labels.extend(labels.cpu().numpy())
         all_preds.extend(preds.cpu().numpy())
         all_probs.extend(probs.cpu().numpy())
 
@@ -72,7 +73,9 @@ def show_misclassified(dataset, labels, preds, probs, num_samples=10):
     axes = np.array(axes).flatten()
 
     for i, idx in enumerate(sorted_idx):
-        image = dataset.dataset[int(idx)]["image"]
+        # Load the original PIL image from the file path
+        path, _ = dataset.samples[int(idx)]
+        image = Image.open(path).convert("RGB")
         actual = LABEL_NAMES[labels[idx]]
         predicted = LABEL_NAMES[preds[idx]]
         confidence = probs[idx].max() * 100
