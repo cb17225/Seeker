@@ -7,7 +7,7 @@ import torch.nn as nn
 from tqdm.auto import tqdm
 
 from config import (
-    DEVICE, SEED, SAVE_DIR, HUB_MODEL_ID, MODEL_NAME, NUM_LABELS, LABEL_NAMES,
+    DEVICE, SEED, SAVE_DIR, MODEL_NAME, NUM_LABELS, LABEL_NAMES,
     NUM_EPOCHS_FROZEN, NUM_EPOCHS_UNFROZEN,
     LR_HEAD, LR_BACKBONE, WEIGHT_DECAY,
 )
@@ -85,7 +85,7 @@ def main():
 
     # ---- Data ----
     print("Loading CIFAKE dataset...")
-    train_loader, val_loader, test_loader = get_dataloaders()
+    train_loader, val_loader, _ = get_dataloaders()
 
     # ---- Model ----
     print("Loading CLIP model...")

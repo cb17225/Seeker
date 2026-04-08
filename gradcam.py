@@ -25,8 +25,13 @@ class CLIPGradCAM:
 
         # Hook into the last vision encoder layer
         target_layer = model.clip.vision_model.encoder.layers[-1]
-        target_layer.register_forward_hook(self._save_activations)
-        target_layer.register_full_backward_hook(self._save_gradients)
+        self._fwd_hook = target_layer.register_forward_hook(self._save_activations)
+        self._bwd_hook = target_layer.register_full_backward_hook(self._save_gradients)
+
+    def remove_hooks(self):
+        """Remove registered hooks to prevent accumulation."""
+        self._fwd_hook.remove()
+        self._bwd_hook.remove()
 
     def _save_activations(self, module, input, output):
         self.activations = output[0]  # (batch, num_tokens, hidden_dim)
@@ -116,6 +121,17 @@ def overlay_heatmap(image, heatmap, alpha=0.5):
     return Image.fromarray((blended * 255).astype(np.uint8))
 
 
+_processor = None
+
+
+def _get_processor():
+    """Lazy-load and cache the CLIP processor."""
+    global _processor
+    if _processor is None:
+        _processor = CLIPProcessor.from_pretrained(MODEL_NAME)
+    return _processor
+
+
 def explain_image(model, image, device="cpu"):
     """Full pipeline: take a PIL image, return prediction + heatmap overlay.
 
@@ -129,12 +145,13 @@ def explain_image(model, image, device="cpu"):
         label: Predicted label string ("Real" or "Fake")
         confidence: Prediction confidence (0-1)
     """
-    processor = CLIPProcessor.from_pretrained(MODEL_NAME)
+    processor = _get_processor()
     inputs = processor(images=image.convert("RGB"), return_tensors="pt")
     pixel_values = inputs["pixel_values"].to(device)
 
     gradcam = CLIPGradCAM(model)
     heatmap, pred_class, confidence = gradcam.generate(pixel_values)
+    gradcam.remove_hooks()
 
     overlay = overlay_heatmap(image.convert("RGB"), heatmap)
     label = LABEL_NAMES[pred_class]
