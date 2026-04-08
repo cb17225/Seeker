@@ -6,7 +6,7 @@ NUM_LABELS = 2
 LABEL_NAMES = ["Real", "Fake"]
 
 # ---------- Dataset ----------
-DATASET_NAME = "CIFAKE"
+KAGGLE_DATASET = "birdy654/cifake-real-and-ai-generated-synthetic-images"
 
 # ---------- Training ----------
 BATCH_SIZE = 64
