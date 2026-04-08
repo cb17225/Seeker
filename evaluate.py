@@ -93,7 +93,7 @@ def show_misclassified(dataset, labels, preds, probs, num_samples=10):
 def main():
     print("Loading model and data...")
     model = CLIPImageClassifier()
-    model.load_state_dict(torch.load(f"{SAVE_DIR}/model.pth", map_location=DEVICE))
+    model.load_state_dict(torch.load(f"{SAVE_DIR}/model.pth", map_location=DEVICE, weights_only=True))
     model.to(DEVICE)
 
     _, _, test_loader = get_dataloaders()
