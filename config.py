@@ -1,3 +1,4 @@
+import os
 import torch
 
 # ---------- Model ----------
@@ -24,4 +25,4 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 HUB_MODEL_ID = "YOUR_USERNAME/seeker-clip-cifake"
 
 # ---------- Paths ----------
-SAVE_DIR = "./seeker-model"
+SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seeker-model")

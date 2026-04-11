@@ -20,6 +20,8 @@ class CIFAKEDataset(Dataset):
 
         for label, class_name in enumerate(["REAL", "FAKE"]):
             class_dir = os.path.join(root_dir, class_name)
+            if not os.path.isdir(class_dir):
+                raise ValueError(f"Expected directory not found: {class_dir}")
             for fname in os.listdir(class_dir):
                 fpath = os.path.join(class_dir, fname)
                 if os.path.isfile(fpath):
@@ -30,7 +32,10 @@ class CIFAKEDataset(Dataset):
 
     def __getitem__(self, idx):
         path, label = self.samples[idx]
-        image = Image.open(path).convert("RGB")
+        try:
+            image = Image.open(path).convert("RGB")
+        except (OSError, SyntaxError) as e:
+            raise RuntimeError(f"Corrupted image: {path}") from e
         inputs = self.processor(images=image, return_tensors="pt")
         pixel_values = inputs["pixel_values"].squeeze(0)
         return pixel_values, torch.tensor(label, dtype=torch.long)
