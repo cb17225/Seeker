@@ -1,3 +1,4 @@
+import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -94,9 +95,15 @@ def show_misclassified(dataset, labels, preds, probs, num_samples=10):
 
 
 def main():
+    checkpoint_path = f"{SAVE_DIR}/model.pth"
+    if not os.path.exists(checkpoint_path):
+        raise FileNotFoundError(
+            f"No checkpoint found at {checkpoint_path}. Run train.py first."
+        )
+
     print("Loading model and data...")
     model = CLIPImageClassifier()
-    model.load_state_dict(torch.load(f"{SAVE_DIR}/model.pth", map_location=DEVICE, weights_only=True))
+    model.load_state_dict(torch.load(checkpoint_path, map_location=DEVICE, weights_only=True))
     model.to(DEVICE)
 
     _, _, test_loader = get_dataloaders()

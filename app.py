@@ -1,19 +1,28 @@
+import os
+import threading
+
 import torch
 import gradio as gr
-from PIL import Image
 from transformers import CLIPProcessor
 
 from config import MODEL_NAME, LABEL_NAMES, SAVE_DIR, DEVICE
 from model import CLIPImageClassifier
 from gradcam import explain_image
 
+MAX_DIM = 4096
+_explain_lock = threading.Lock()
+
 
 # ---------- Load model ----------
 
 def load_model():
     """Load trained model from checkpoint."""
+    checkpoint_path = os.path.join(SAVE_DIR, "model.pth")
+    if not os.path.exists(checkpoint_path):
+        raise FileNotFoundError(
+            f"No checkpoint found at {checkpoint_path}. Run train.py first."
+        )
     model = CLIPImageClassifier()
-    checkpoint_path = f"{SAVE_DIR}/model.pth"
     model.load_state_dict(
         torch.load(checkpoint_path, weights_only=True, map_location=DEVICE)
     )
@@ -26,25 +35,42 @@ model = load_model()
 processor = CLIPProcessor.from_pretrained(MODEL_NAME)
 
 
+def _prepare_image(image):
+    """Convert to RGB and cap dimensions to prevent OOM."""
+    image = image.convert("RGB")
+    if max(image.size) > MAX_DIM:
+        image.thumbnail((MAX_DIM, MAX_DIM))
+    return image
+
+
 # ---------- Inference functions ----------
 
 def predict(image):
     """Classify an image as Real or Fake."""
-    inputs = processor(images=image.convert("RGB"), return_tensors="pt")
-    pixel_values = inputs["pixel_values"].to(DEVICE)
+    try:
+        image = _prepare_image(image)
+        inputs = processor(images=image, return_tensors="pt")
+        pixel_values = inputs["pixel_values"].to(DEVICE)
 
-    with torch.no_grad():
-        logits = model(pixel_values)
-        probs = torch.softmax(logits, dim=1)
+        with torch.inference_mode():
+            logits = model(pixel_values)
+            probs = torch.softmax(logits, dim=1)
 
-    return {name: probs[0, i].item() for i, name in enumerate(LABEL_NAMES)}
+        return {name: probs[0, i].item() for i, name in enumerate(LABEL_NAMES)}
+    except Exception as e:
+        return {"Error": str(e)}
 
 
 def explain(image):
     """Generate GradCAM heatmap showing which regions influenced the prediction."""
-    overlay, label, confidence = explain_image(model, image, device=DEVICE)
-    caption = f"{label} ({confidence:.1%})"
-    return overlay, caption
+    try:
+        image = _prepare_image(image)
+        with _explain_lock:
+            overlay, label, confidence = explain_image(model, image, device=DEVICE)
+        caption = f"{label} ({confidence:.1%})"
+        return overlay, caption
+    except Exception as e:
+        return None, f"Error: {e}"
 
 
 # ---------- Gradio UI ----------

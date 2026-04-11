@@ -1,5 +1,5 @@
 import torch.nn as nn
-from transformers import CLIPModel
+from transformers import CLIPVisionModelWithProjection
 
 from config import MODEL_NAME, NUM_LABELS
 
@@ -14,7 +14,7 @@ class CLIPImageClassifier(nn.Module):
 
     def __init__(self, model_name=MODEL_NAME, num_labels=NUM_LABELS):
         super().__init__()
-        self.clip = CLIPModel.from_pretrained(model_name)
+        self.clip = CLIPVisionModelWithProjection.from_pretrained(model_name)
         self.classifier = nn.Sequential(
             nn.Linear(512, 256),
             nn.ReLU(),

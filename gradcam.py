@@ -114,6 +114,7 @@ def overlay_heatmap(image, heatmap, alpha=0.5):
     colormap = plt.cm.jet(heatmap_resized)[:, :, :3]  # drop alpha channel
 
     # Blend with original image
+    image = image.convert("RGB")
     image_np = np.array(image).astype(np.float32) / 255.0
     blended = (1 - alpha) * image_np + alpha * colormap
     blended = np.clip(blended, 0, 1)
@@ -150,8 +151,10 @@ def explain_image(model, image, device="cpu"):
     pixel_values = inputs["pixel_values"].to(device)
 
     gradcam = CLIPGradCAM(model)
-    heatmap, pred_class, confidence = gradcam.generate(pixel_values)
-    gradcam.remove_hooks()
+    try:
+        heatmap, pred_class, confidence = gradcam.generate(pixel_values)
+    finally:
+        gradcam.remove_hooks()
 
     overlay = overlay_heatmap(image.convert("RGB"), heatmap)
     label = LABEL_NAMES[pred_class]
