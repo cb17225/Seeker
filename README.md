@@ -14,7 +14,7 @@ An end-to-end machine learning tool that distinguishes between **real** and **AI
 | Component | Details |
 |-----------|---------|
 | **Architecture** | CLIP ViT-B/32 + classification head (512 → 256 → 2) |
-| **Training Data** | [CIFAKE](https://huggingface.co/datasets/CIFAKE) — 60K real (CIFAR-10) + 60K AI-generated (Stable Diffusion) images |
+| **Training Data** | [CIFAKE](https://www.kaggle.com/datasets/birdy654/cifake-real-and-ai-generated-synthetic-images) — 60K real (CIFAR-10) + 60K AI-generated (Stable Diffusion) images |
 | **Training Strategy** | Two-phase: frozen backbone (5 epochs) → partial fine-tuning of last 2 layers (3 epochs) |
 | **Explainability** | GradCAM attention heatmaps on CLIP's vision transformer |
 | **Framework** | PyTorch + Hugging Face Transformers |
@@ -44,6 +44,19 @@ Train on Google Colab with a free T4 GPU:
 git clone https://github.com/YOUR_USERNAME/Seeker.git
 cd Seeker
 pip install -r requirements.txt
+```
+
+Set up Kaggle credentials (required to download CIFAKE):
+
+```python
+import os
+os.environ["KAGGLE_USERNAME"] = "your_username"
+os.environ["KAGGLE_KEY"] = "your_api_key"
+```
+
+Then run training:
+
+```bash
 python train.py
 ```
 
