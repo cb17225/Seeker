@@ -31,8 +31,15 @@ def load_model():
     return model
 
 
-model = load_model()
+try:
+    model = load_model()
+except FileNotFoundError as e:
+    print(f"[Seeker] {e}")
+    model = None
+
 processor = CLIPProcessor.from_pretrained(MODEL_NAME)
+
+MODEL_MISSING_MSG = "Model not loaded. No checkpoint found at seeker-model/model.pth."
 
 
 def _prepare_image(image):
@@ -47,6 +54,8 @@ def _prepare_image(image):
 
 def predict(image):
     """Classify an image as Real or Fake."""
+    if model is None:
+        return {"Error": MODEL_MISSING_MSG}
     try:
         image = _prepare_image(image)
         inputs = processor(images=image, return_tensors="pt")
@@ -63,6 +72,8 @@ def predict(image):
 
 def explain(image):
     """Generate GradCAM heatmap showing which regions influenced the prediction."""
+    if model is None:
+        return None, MODEL_MISSING_MSG
     try:
         image = _prepare_image(image)
         with _explain_lock:
