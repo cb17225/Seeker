@@ -1,5 +1,5 @@
-torch>=2.0
-torchvision>=0.15
+torch>=2.4
+torchvision>=0.19
 transformers>=4.36
 kagglehub>=0.2
 gradio>=4.0

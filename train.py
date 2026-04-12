@@ -79,6 +79,20 @@ def save_checkpoint(model, path, config):
     print(f"Checkpoint saved to {path}")
 
 
+def save_resume_checkpoint(path, model, optimizer, epoch, phase, history):
+    """Atomically save full training state for interruption recovery."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp_path = path + ".tmp"
+    torch.save({
+        "model_state": model.state_dict(),
+        "optimizer_state": optimizer.state_dict(),
+        "epoch": epoch,
+        "phase": phase,
+        "history": history,
+    }, tmp_path)
+    os.replace(tmp_path, path)
+
+
 def main():
     set_seed()
     print(f"Using device: {DEVICE}")
@@ -98,31 +112,51 @@ def main():
         "label_names": LABEL_NAMES,
     }
 
-    history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": []}
+    # ---- Resume state ----
+    resume_path = os.path.join(SAVE_DIR, "resume.pth")
+    resume_data = None
+    if os.path.exists(resume_path):
+        print(f"Found resume checkpoint at {resume_path}, loading...")
+        resume_data = torch.load(resume_path, map_location=DEVICE, weights_only=True)
+        model.load_state_dict(resume_data["model_state"])
+        history = resume_data["history"]
+        start_phase = resume_data["phase"]
+        start_epoch = resume_data["epoch"] + 1
+        print(f"Resuming from Phase {start_phase}, Epoch {start_epoch + 1}")
+    else:
+        history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": []}
+        start_phase = 1
+        start_epoch = 0
 
     # ---- Phase 1: Frozen backbone ----
-    print("\n--- Phase 1: Training classifier head (backbone frozen) ---")
-    for param in model.clip.parameters():
-        param.requires_grad = False
+    if start_phase == 1:
+        print("\n--- Phase 1: Training classifier head (backbone frozen) ---")
+        for param in model.clip.parameters():
+            param.requires_grad = False
 
-    optimizer = torch.optim.AdamW(
-        model.classifier.parameters(), lr=LR_HEAD, weight_decay=WEIGHT_DECAY
-    )
+        optimizer = torch.optim.AdamW(
+            model.classifier.parameters(), lr=LR_HEAD, weight_decay=WEIGHT_DECAY
+        )
+        if resume_data and resume_data["phase"] == 1:
+            optimizer.load_state_dict(resume_data["optimizer_state"])
 
-    for epoch in range(NUM_EPOCHS_FROZEN):
-        train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, criterion, DEVICE)
-        val_loss, val_acc = evaluate(model, val_loader, criterion, DEVICE)
+        for epoch in range(start_epoch, NUM_EPOCHS_FROZEN):
+            train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, criterion, DEVICE)
+            val_loss, val_acc = evaluate(model, val_loader, criterion, DEVICE)
 
-        history["train_loss"].append(train_loss)
-        history["train_acc"].append(train_acc)
-        history["val_loss"].append(val_loss)
-        history["val_acc"].append(val_acc)
+            history["train_loss"].append(train_loss)
+            history["train_acc"].append(train_acc)
+            history["val_loss"].append(val_loss)
+            history["val_acc"].append(val_acc)
 
-        print(f"Epoch {epoch + 1}/{NUM_EPOCHS_FROZEN} | "
-              f"Train Loss: {train_loss:.4f} Acc: {train_acc:.4f} | "
-              f"Val Loss: {val_loss:.4f} Acc: {val_acc:.4f}")
+            print(f"Epoch {epoch + 1}/{NUM_EPOCHS_FROZEN} | "
+                  f"Train Loss: {train_loss:.4f} Acc: {train_acc:.4f} | "
+                  f"Val Loss: {val_loss:.4f} Acc: {val_acc:.4f}")
 
-    save_checkpoint(model, os.path.join(SAVE_DIR, "phase1.pth"), model_config)
+            save_resume_checkpoint(resume_path, model, optimizer, epoch, 1, history)
+
+        save_checkpoint(model, os.path.join(SAVE_DIR, "phase1.pth"), model_config)
+        start_epoch = 0  # reset for phase 2
 
     # ---- Phase 2: Unfreeze last 2 vision encoder layers ----
     print("\n--- Phase 2: Fine-tuning last 2 encoder layers ---")
@@ -142,7 +176,10 @@ def main():
         {"params": model.clip.vision_model.post_layernorm.parameters(), "lr": LR_BACKBONE},
     ], weight_decay=WEIGHT_DECAY)
 
-    for epoch in range(NUM_EPOCHS_UNFROZEN):
+    if resume_data and resume_data["phase"] == 2:
+        optimizer.load_state_dict(resume_data["optimizer_state"])
+
+    for epoch in range(start_epoch, NUM_EPOCHS_UNFROZEN):
         train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, criterion, DEVICE)
         val_loss, val_acc = evaluate(model, val_loader, criterion, DEVICE)
 
@@ -155,8 +192,14 @@ def main():
               f"Train Loss: {train_loss:.4f} Acc: {train_acc:.4f} | "
               f"Val Loss: {val_loss:.4f} Acc: {val_acc:.4f}")
 
+        save_resume_checkpoint(resume_path, model, optimizer, epoch, 2, history)
+
     # ---- Save final model ----
     save_checkpoint(model, os.path.join(SAVE_DIR, "model.pth"), model_config)
+
+    # ---- Clean up resume checkpoint on successful completion ----
+    if os.path.exists(resume_path):
+        os.remove(resume_path)
 
     # ---- Save training history ----
     history_path = os.path.join(SAVE_DIR, "history.json")
