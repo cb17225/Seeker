@@ -22,7 +22,7 @@ SEED = 42
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # ---------- Hugging Face Hub ----------
-HUB_MODEL_ID = "cb17225/seeker-clip-cifake"
+HUB_MODEL_ID = "cb17225/seeker"
 
 # ---------- Paths ----------
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seeker-model")
