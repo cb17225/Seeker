@@ -34,7 +34,11 @@ class CLIPGradCAM:
         self._bwd_hook.remove()
 
     def _save_activations(self, module, input, output):
-        self.activations = output[0]  # (batch, num_tokens, hidden_dim)
+        # CLIPEncoderLayer returns a tuple (hidden_states, ...) in older
+        # transformers and the tensor directly in newer versions — handle both.
+        if isinstance(output, tuple):
+            output = output[0]
+        self.activations = output  # (batch, num_tokens, hidden_dim)
 
     def _save_gradients(self, module, grad_input, grad_output):
         self.gradients = grad_output[0]  # (batch, num_tokens, hidden_dim)
