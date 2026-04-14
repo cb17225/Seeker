@@ -39,7 +39,7 @@ Seeker/
 Train on Google Colab with a free T4 GPU:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/Seeker.git
+git clone https://github.com/cb17225/Seeker.git
 cd Seeker
 pip install -r requirements.txt
 ```
