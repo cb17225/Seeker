@@ -4,7 +4,7 @@ import threading
 import torch
 import gradio as gr
 from PIL import Image
-from transformers import CLIPProcessor
+from transformers import CLIPImageProcessor
 
 from config import MODEL_NAME, LABEL_NAMES, SAVE_DIR, DEVICE
 from model import CLIPImageClassifier
@@ -48,7 +48,7 @@ def _get_processor():
     doesn't prevent the Space from booting."""
     global _processor
     if _processor is None:
-        _processor = CLIPProcessor.from_pretrained(MODEL_NAME)
+        _processor = CLIPImageProcessor.from_pretrained(MODEL_NAME)
     return _processor
 
 
@@ -68,7 +68,7 @@ def _prepare_image(image):
 def predict(image):
     """Classify an image as Real or Fake."""
     if model is None:
-        return {"Error": MODEL_MISSING_MSG}
+        raise gr.Error(MODEL_MISSING_MSG)
     try:
         image = _prepare_image(image)
         inputs = _get_processor()(images=image, return_tensors="pt")
@@ -80,14 +80,14 @@ def predict(image):
 
         return {name: probs[0, i].item() for i, name in enumerate(LABEL_NAMES)}
     except Exception as e:
-        print(f"[Seeker] predict error: {e}")
-        return {"Error": GENERIC_ERROR}
+        print(f"[Seeker] predict error: {e!r}")
+        raise gr.Error(GENERIC_ERROR)
 
 
 def explain(image):
     """Generate GradCAM heatmap showing which regions influenced the prediction."""
     if model is None:
-        return None, MODEL_MISSING_MSG
+        raise gr.Error(MODEL_MISSING_MSG)
     try:
         image = _prepare_image(image)
         with _explain_lock:
@@ -95,8 +95,8 @@ def explain(image):
         caption = f"{label} ({confidence:.1%})"
         return overlay, caption
     except Exception as e:
-        print(f"[Seeker] explain error: {e}")
-        return None, GENERIC_ERROR
+        print(f"[Seeker] explain error: {e!r}")
+        raise gr.Error(GENERIC_ERROR)
 
 
 # ---------- Gradio UI ----------

@@ -1,7 +1,7 @@
 import os
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
-from transformers import CLIPProcessor
+from transformers import CLIPImageProcessor
 from PIL import Image
 import kagglehub
 
@@ -48,7 +48,7 @@ def get_dataloaders(batch_size=BATCH_SIZE, val_split=0.1):
     stays fully held out for final evaluation.
     """
     path = kagglehub.dataset_download(KAGGLE_DATASET)
-    processor = CLIPProcessor.from_pretrained(MODEL_NAME)
+    processor = CLIPImageProcessor.from_pretrained(MODEL_NAME)
 
     train_full = CIFAKEDataset(os.path.join(path, "train"), processor)
     test_set = CIFAKEDataset(os.path.join(path, "test"), processor)

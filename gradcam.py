@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
-from transformers import CLIPProcessor
+from transformers import CLIPImageProcessor
 
 from config import MODEL_NAME, LABEL_NAMES
 
@@ -133,7 +133,7 @@ def _get_processor():
     """Lazy-load and cache the CLIP processor."""
     global _processor
     if _processor is None:
-        _processor = CLIPProcessor.from_pretrained(MODEL_NAME)
+        _processor = CLIPImageProcessor.from_pretrained(MODEL_NAME)
     return _processor
 
 
