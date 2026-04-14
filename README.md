@@ -31,9 +31,7 @@ Seeker/
 ├── dataset.py             # CIFAKE dataset loading
 ├── train.py               # Training entry point
 ├── evaluate.py            # Metrics, confusion matrix, error analysis
-├── gradcam.py             # GradCAM visualizations for CLIP vision encoder
-└── notebooks/
-    └── explore.ipynb      # EDA, embedding visualization, GradCAM examples
+└── gradcam.py             # GradCAM visualizations for CLIP vision encoder
 ```
 
 ## Training
