@@ -9,6 +9,7 @@ from transformers import CLIPImageProcessor
 from config import MODEL_NAME, LABEL_NAMES, SAVE_DIR, DEVICE
 from model import CLIPImageClassifier
 from gradcam import explain_image
+from forensics import compute_spectrum, multi_crop_predict
 
 MAX_DIM = 4096
 Image.MAX_IMAGE_PIXELS = 100 * 1024 * 1024  # 100 MP — blocks decompression bombs, allows modern phone photos
@@ -67,6 +68,8 @@ def _prepare_image(image):
 
 def predict(image):
     """Classify an image as Real or Fake."""
+    if image is None:
+        raise gr.Error("Please upload an image first.")
     if model is None:
         raise gr.Error(MODEL_MISSING_MSG)
     try:
@@ -86,6 +89,8 @@ def predict(image):
 
 def explain(image):
     """Generate GradCAM heatmap showing which regions influenced the prediction."""
+    if image is None:
+        raise gr.Error("Please upload an image first.")
     if model is None:
         raise gr.Error(MODEL_MISSING_MSG)
     try:
@@ -99,6 +104,52 @@ def explain(image):
         raise gr.Error(GENERIC_ERROR)
 
 
+def analyze_frequency(image):
+    """Compute FFT power spectrum."""
+    if image is None:
+        raise gr.Error("Please upload an image first.")
+    try:
+        image = _prepare_image(image)
+        return compute_spectrum(image)
+    except Exception as e:
+        print(f"[Seeker] frequency error: {e!r}")
+        raise gr.Error(GENERIC_ERROR)
+
+
+def check_consistency(image):
+    """Multi-crop consistency check."""
+    if image is None:
+        raise gr.Error("Please upload an image first.")
+    if model is None:
+        raise gr.Error(MODEL_MISSING_MSG)
+    try:
+        image = _prepare_image(image)
+
+        def preprocess(img):
+            inputs = _get_processor()(images=img, return_tensors="pt")
+            return inputs["pixel_values"]
+
+        results = multi_crop_predict(image, model, preprocess, device=DEVICE)
+
+        rows = [
+            [r["Region"], f'{r["Real"]:.1%}', f'{r["Fake"]:.1%}', r["Prediction"]]
+            for r in results
+        ]
+
+        predictions = [r["Prediction"] for r in results]
+        agreement = max(predictions.count("Real"), predictions.count("Fake")) / len(predictions)
+        summary = (
+            f"Agreement: {agreement:.0%} — "
+            f"{predictions.count('Real')} Real, {predictions.count('Fake')} Fake "
+            f"out of {len(predictions)} regions"
+        )
+
+        return rows, summary
+    except Exception as e:
+        print(f"[Seeker] consistency error: {e!r}")
+        raise gr.Error(GENERIC_ERROR)
+
+
 # ---------- Gradio UI ----------
 
 with gr.Blocks(title="Seeker — AI Image Detector") as demo:
@@ -106,6 +157,13 @@ with gr.Blocks(title="Seeker — AI Image Detector") as demo:
     gr.Markdown(
         "Upload an image to check if it's **real** or **AI-generated**, "
         "powered by a fine-tuned CLIP ViT-B/32 model."
+    )
+    gr.Markdown(
+        "> **Limitations:** Trained on 32×32 CIFAKE images (upscaled to 224×224) — "
+        "performance may vary on high-resolution inputs. "
+        "AI-generated images in the training set are from **Stable Diffusion v1.4** only; "
+        "newer generators (DALL·E 3, Midjourney, Flux) may not be detected as reliably. "
+        "GradCAM heatmaps are coarse (7×7 grid) due to ViT-B/32's patch size."
     )
 
     with gr.Tabs():
@@ -136,6 +194,47 @@ with gr.Blocks(title="Seeker — AI Image Detector") as demo:
                 fn=explain,
                 inputs=explain_input,
                 outputs=[explain_output, explain_caption],
+                concurrency_limit=2,
+            )
+
+        with gr.TabItem("Frequency"):
+            gr.Markdown(
+                "FFT power spectrum reveals frequency-domain artifacts. "
+                "AI-generated images often show periodic patterns or unnatural "
+                "energy distributions invisible in pixel space."
+            )
+            with gr.Row():
+                freq_input = gr.Image(type="pil", label="Upload Image")
+                freq_output = gr.Image(type="pil", label="Power Spectrum")
+            freq_btn = gr.Button("Analyze", variant="primary")
+            freq_btn.click(
+                fn=analyze_frequency,
+                inputs=freq_input,
+                outputs=freq_output,
+                concurrency_limit=4,
+            )
+
+        with gr.TabItem("Consistency"):
+            gr.Markdown(
+                "Classifies the full image and 5 spatial crops independently. "
+                "Consistent predictions suggest uniform authenticity; disagreement "
+                "may indicate localized editing or splicing."
+            )
+            with gr.Row():
+                consist_input = gr.Image(type="pil", label="Upload Image")
+                with gr.Column():
+                    consist_table = gr.Dataframe(
+                        headers=["Region", "Real", "Fake", "Prediction"],
+                        label="Per-Region Results",
+                    )
+                    consist_summary = gr.Textbox(
+                        label="Agreement", interactive=False
+                    )
+            consist_btn = gr.Button("Check", variant="primary")
+            consist_btn.click(
+                fn=check_consistency,
+                inputs=consist_input,
+                outputs=[consist_table, consist_summary],
                 concurrency_limit=2,
             )
 

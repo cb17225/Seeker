@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 from PIL import Image
 from transformers import CLIPImageProcessor
 
@@ -115,12 +115,14 @@ def overlay_heatmap(image, heatmap, alpha=0.5):
     ) / 255.0
 
     # Apply colormap
-    colormap = plt.cm.jet(heatmap_resized)[:, :, :3]  # drop alpha channel
+    colormap = cm.jet(heatmap_resized)[:, :, :3]  # drop alpha channel
 
-    # Blend with original image
+    # Blend with original image — scale alpha by heatmap intensity so
+    # low-activation areas stay clear and only hot regions get colored
     image = image.convert("RGB")
     image_np = np.array(image).astype(np.float32) / 255.0
-    blended = (1 - alpha) * image_np + alpha * colormap
+    alpha_mask = heatmap_resized[..., np.newaxis] * alpha
+    blended = (1 - alpha_mask) * image_np + alpha_mask * colormap
     blended = np.clip(blended, 0, 1)
 
     return Image.fromarray((blended * 255).astype(np.uint8))

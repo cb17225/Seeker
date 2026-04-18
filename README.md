@@ -70,6 +70,7 @@ python train.py
 - Trained on 32x32 CIFAKE images (resized to 224x224 for CLIP) — performance may vary on high-resolution images
 - AI-generated images in the training set come from **Stable Diffusion v1.4** only — newer generators (DALL-E 3, Midjourney v5, Flux) may not be detected as reliably
 - Binary classification only (Real vs Fake) — does not identify the specific generator
+- GradCAM heatmaps are coarse (7x7 grid) due to ViT-B/32's 32-pixel patch size — highlights broad regions, not pixel-level detail
 
 ## References
 
