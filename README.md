@@ -7,7 +7,9 @@ An end-to-end machine learning tool that distinguishes between **real** and **AI
 1. **Upload** any image via drag-and-drop or file picker
 2. **Seeker** runs the image through a fine-tuned CLIP vision encoder
 3. Get a **Real / Fake prediction** with a confidence score
-4. **Explain** — view a GradCAM heatmap showing which regions of the image influenced the model's decision
+4. **Explain** — view a GradCAM heatmap showing which regions influenced the model's decision
+5. **Frequency** — inspect the FFT power spectrum for spectral artifacts common in AI-generated images
+6. **Consistency** — classify spatial crops independently to detect localized edits or splicing
 
 ## Model Details
 
@@ -24,14 +26,15 @@ An end-to-end machine learning tool that distinguishes between **real** and **AI
 ```
 Seeker/
 ├── README.md              # Project documentation
-├── app.py                 # Gradio inference app (Predict + Explain tabs)
+├── app.py                 # Gradio inference app (Predict, Explain, Frequency, Consistency)
 ├── requirements.txt       # Dependencies
 ├── config.py              # Hyperparameters and paths
 ├── model.py               # CLIPImageClassifier architecture
 ├── dataset.py             # CIFAKE dataset loading
 ├── train.py               # Training entry point
 ├── evaluate.py            # Metrics, confusion matrix, error analysis
-└── gradcam.py             # GradCAM visualizations for CLIP vision encoder
+├── gradcam.py             # GradCAM visualizations for CLIP vision encoder
+└── forensics.py           # FFT spectrum analysis and multi-crop consistency
 ```
 
 ## Training

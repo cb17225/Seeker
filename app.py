@@ -145,6 +145,8 @@ def check_consistency(image):
         )
 
         return rows, summary
+    except ValueError as e:
+        raise gr.Error(str(e))
     except Exception as e:
         print(f"[Seeker] consistency error: {e!r}")
         raise gr.Error(GENERIC_ERROR)

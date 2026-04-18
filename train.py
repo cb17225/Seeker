@@ -122,7 +122,7 @@ def main():
         history = resume_data["history"]
         start_phase = resume_data["phase"]
         start_epoch = resume_data["epoch"] + 1
-        print(f"Resuming from Phase {start_phase}, Epoch {start_epoch + 1}")
+        print(f"Resuming from Phase {start_phase}, Epoch {start_epoch}")
     else:
         history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": []}
         start_phase = 1
