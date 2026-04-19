@@ -10,14 +10,9 @@ from gradcam import overlay_heatmap
 
 def test_smoke_imports():
     """All modules load without errors."""
-    import config
-    import model
-    import dataset
-    import forensics
-    import gradcam
-    import evaluate
-    import train
-    import app
+    import importlib
+    for name in ["config", "model", "dataset", "forensics", "gradcam", "evaluate", "train", "app"]:
+        importlib.import_module(name)
 
 
 # ---- FFT Spectrum ----
