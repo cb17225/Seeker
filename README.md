@@ -1,6 +1,8 @@
 # Seeker - AI Image Detector
 
-An end-to-end machine learning tool that distinguishes between **real** and **AI-generated** images using a fine-tuned [CLIP ViT-B/32](https://openai.com/research/clip) model.
+[![CI](https://github.com/cb17225/Seeker/actions/workflows/ci.yml/badge.svg)](https://github.com/cb17225/Seeker/actions/workflows/ci.yml)
+
+An end-to-end machine learning tool that distinguishes between **real** and **AI-generated** images using a fine-tuned [CLIP ViT-B/32](https://openai.com/research/clip) model. **[Try the live demo →](https://huggingface.co/spaces/cb17225/seeker)**
 
 ## How It Works
 
@@ -20,6 +22,16 @@ An end-to-end machine learning tool that distinguishes between **real** and **AI
 | **Training Strategy** | Two-phase: frozen backbone (5 epochs) → partial fine-tuning of last 2 layers (3 epochs) |
 | **Explainability** | GradCAM attention heatmaps on CLIP's vision transformer |
 | **Framework** | PyTorch + Hugging Face Transformers |
+
+## Performance
+
+Evaluated on the held-out CIFAKE test set (10,000 real + 10,000 AI-generated images):
+
+| Class | Precision | Recall | F1 |
+|-------|-----------|--------|----|
+| Real  | 0.98 | 0.98 | 0.98 |
+| Fake  | 0.98 | 0.98 | 0.98 |
+| **Overall accuracy** | | | **98%** |
 
 ## Project Structure
 
