@@ -87,6 +87,9 @@ class CLIPGradCAM:
 
         # Reshape to spatial grid (7x7 for ViT-B/32 with 224x224 input)
         grid_size = int(cam.shape[0] ** 0.5)
+        assert grid_size * grid_size == cam.shape[0], (
+            f"Patch count {cam.shape[0]} is not a perfect square"
+        )
         heatmap = cam.reshape(grid_size, grid_size).detach().cpu().numpy()
 
         # Normalize to [0, 1]

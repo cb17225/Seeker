@@ -69,8 +69,8 @@ def show_misclassified(dataset, labels, preds, probs, num_samples=10):
     cols = min(5, len(sorted_idx))
     rows = (len(sorted_idx) + cols - 1) // cols
     fig, axes = plt.subplots(rows, cols, figsize=(3 * cols, 3 * rows))
-    if rows == 1:
-        axes = [axes] if cols == 1 else axes
+    if rows == 1 and cols == 1:
+        axes = [axes]
     axes = np.array(axes).flatten()
 
     for i, idx in enumerate(sorted_idx):

@@ -64,7 +64,7 @@ python train.py
 ## Future Work
 
 - Multi-dataset training (GenImage, ArtiFact) for cross-generator detection
-- Frequency-domain analysis to detect spectral artifacts across AI generators
+- Statistical frequency-domain comparison across generator types — the current Frequency tab visualizes the FFT power spectrum per image but does not compare against known generator signatures
 - Multi-class generator identification (Stable Diffusion, DALL-E, Midjourney, etc.)
 - Robustness testing against JPEG compression, resizing, and screenshots
 
