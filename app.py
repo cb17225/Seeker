@@ -60,6 +60,7 @@ def _prepare_image(image):
     """Cap dimensions then convert to RGB. Order matters — thumbnail first
     so decompression-bomb images get downsampled before the full decode."""
     if max(image.size) > MAX_DIM:
+        image = image.copy()
         image.thumbnail((MAX_DIM, MAX_DIM))
     return image.convert("RGB")
 
@@ -136,12 +137,13 @@ def check_consistency(image):
             for r in results
         ]
 
-        predictions = [r["Prediction"] for r in results]
-        agreement = max(predictions.count("Real"), predictions.count("Fake")) / len(predictions)
+        full_pred = results[0]["Prediction"]
+        crop_preds = [r["Prediction"] for r in results[1:]]
+        real_count = crop_preds.count("Real")
+        fake_count = crop_preds.count("Fake")
         summary = (
-            f"Agreement: {agreement:.0%} — "
-            f"{predictions.count('Real')} Real, {predictions.count('Fake')} Fake "
-            f"out of {len(predictions)} regions"
+            f"Full image: {full_pred}. "
+            f"Crops: {real_count} Real, {fake_count} Fake."
         )
 
         return rows, summary

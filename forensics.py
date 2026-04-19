@@ -5,6 +5,12 @@ from PIL import Image
 
 from config import LABEL_NAMES
 
+# Crops cover ~85% of the shorter dimension so each region still resembles
+# a full scene at training scale. Smaller ratios (e.g. 50%) produce crops
+# that are out-of-distribution for a model trained on 32x32 -> 224x224
+# upscaling, which collapses predictions toward the majority class.
+CROP_RATIO = 0.85
+
 
 def compute_spectrum(image):
     """Compute the 2D FFT log power spectrum of an image.
@@ -58,14 +64,14 @@ def multi_crop_predict(image, model, preprocess_fn, device="cpu"):
     w, h = image.size
     if min(w, h) < 32:
         raise ValueError("Image too small for multi-crop analysis")
-    crop_size = min(w, h) // 2
+    crop_size = int(min(w, h) * CROP_RATIO)
 
     regions = [("Full Image", image)]
 
-    cx, cy = w // 2, h // 2
-    half = crop_size // 2
+    cx0 = (w - crop_size) // 2
+    cy0 = (h - crop_size) // 2
     crops = [
-        ("Center", (cx - half, cy - half, cx + half, cy + half)),
+        ("Center", (cx0, cy0, cx0 + crop_size, cy0 + crop_size)),
         ("Top-Left", (0, 0, crop_size, crop_size)),
         ("Top-Right", (w - crop_size, 0, w, crop_size)),
         ("Bottom-Left", (0, h - crop_size, crop_size, h)),
